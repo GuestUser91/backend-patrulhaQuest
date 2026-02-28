@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  LEADER
+  STUDENT
+}
+
+// Models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  role      UserRole
+  patrolId  String?
+  patrol    Patrol?  @relation(fields: [patrolId], references: [id])
+  attendances Attendance[]
+  
+  // JWT
+  refreshToken  String?
+  refreshTokenExpiresAt DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([patrolId])
+}
+
+model Patrol {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String
+  icon      String
+  points    Int      @default(0)
+  members   User[]
+  
+  // Relations
+  pointEntries PointEntry[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Dynamic {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  type        String   // 'quiz' | 'task' | 'wordscramble' | 'memory'
+  active      Boolean  @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  
+  // Relations
+  questions   QuizQuestion[]
+  words       WordScrambleWord[]
+  memoryCards MemoryCard[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QuizQuestion {
+  id              String   @id @default(cuid())
+  question        String
+  type            String   // 'multiple' | 'truefalse'
+  options         String[] // JSON array
+  correctIndex    Int
+  points          Int      @default(10)
+  
+  // Relations
+  dynamicId       String
+  dynamic         Dynamic  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dynamicId])
+}
+
+model WordScrambleWord {
+  id        String   @id @default(cuid())
+  word      String
+  hint      String
+  points    Int      @default(10)
+  
+  // Relations
+  dynamicId String
+  dynamic   Dynamic  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dynamicId])
+}
+
+model MemoryCard {
+  id        String   @id @default(cuid())
+  content   String
+  pairId    String
+  
+  // Relations
+  dynamicId String
+  dynamic   Dynamic  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dynamicId])
+}
+
+model PointEntry {
+  id        String   @id @default(cuid())
+  reason    String
+  points    Int
+  
+  // Relations
+  patrolId  String
+  patrol    Patrol   @relation(fields: [patrolId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patrolId])
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  present   Boolean
+  date      DateTime @default(now())
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
