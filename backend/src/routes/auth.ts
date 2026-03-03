@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response} from 'express';
 import { z } from 'zod';
 import { AuthService } from '../services/auth';
 import { LoginRequest, RegisterRequest, AuthRequest } from '../types';
@@ -8,7 +8,6 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// small helper to parse duration strings into milliseconds
 function parseDuration(duration: string): number {
   const match = /^([0-9]+)(s|m|h|d)$/.exec(duration);
   if (!match) {
@@ -31,12 +30,12 @@ function parseDuration(duration: string): number {
 
 const router = Router();
 
-// multer setup: store avatars under uploads/avatars
+
 const uploadsDir = path.join(process.cwd(), 'uploads', 'avatars');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 const storage = multer.diskStorage({
-  destination: function (_req, _file, cb) { cb(null, uploadsDir); },
-  filename: function (_req, file, cb) {
+  destination: function (_req: any, _file: any, cb: (error: Error | null, destination: string) => void) { cb(null, uploadsDir); },
+  filename: function (_req: any, file: any, cb: (error: Error | null, filename: string) => void) {
     const ext = path.extname(file.originalname) || '.png';
     const name = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext;
     cb(null, name);
@@ -45,33 +44,29 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: any, file: any, cb: multer.FileFilterCallback) => {
     const allowed = /jpeg|jpg|png|webp/;
     const ok = allowed.test(file.mimetype) || allowed.test(path.extname(file.originalname).toLowerCase());
     cb(null, ok);
   }
 });
 
-// Schemas de validação
-// Registro: apenas STUDENT para evitar criação maliciosa de LEADER
+
 const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-  role: z.literal('STUDENT').or(z.literal('student')), // Only allow STUDENT
+  role: z.literal('STUDENT').or(z.literal('student')), 
 });
 
-// Login: aceita LEADER e STUDENT (ambos podem fazer login)
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(1, 'Senha é obrigatória'),
   role: z.enum(['LEADER', 'STUDENT']),
 });
 
-// POST /auth/register
 router.post('/register', async (req, res) => {
   try {
-    // Normalize role to uppercase to accept 'leader'|'student' from frontend
     if (req.body && req.body.role) {
       req.body.role = String(req.body.role).toUpperCase();
     }
@@ -81,10 +76,8 @@ router.post('/register', async (req, res) => {
 
     const result = await AuthService.register(data);
 
-    // resultado contém user, accessToken e refreshToken
     const { user, accessToken, refreshToken } = result as any;
 
-    // configurações de cookie para refresh token
     const cookieOptions: any = {
       httpOnly: true,
       secure: config.cookie.secure,
@@ -121,7 +114,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /auth/login
 router.post('/login', async (req, res) => {
   try {
     if (req.body && req.body.role) {
@@ -171,7 +163,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET /auth/me
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -204,7 +195,6 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /auth/me - atualizar perfil (nome, avatar)
 router.patch('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -221,7 +211,7 @@ router.patch('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /auth/me/avatar - upload avatar (multipart/form-data)
-router.post('/me/avatar', authMiddleware, upload.single('avatar'), async (req: AuthRequest, res: Response) => {
+router.post('/me/avatar', (authMiddleware as any), (upload.single('avatar') as any), async (req: any, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ success: false, error: 'Usuário não autenticado' });
     if (!req.file) return res.status(400).json({ success: false, error: 'Arquivo não enviado' });

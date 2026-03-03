@@ -46,7 +46,7 @@ export class AttendanceService {
       else countsMap[sid].absentCount = g._count._all;
     }
 
-    const stats = students.map(s => ({
+    const stats = students.map((s: { id: string | number; name: any; avatar: any; patrolId: any; }) => ({
       id: s.id,
       name: s.name,
       avatar: s.avatar,
