@@ -172,7 +172,6 @@ router.get('/me', authMiddleware, async (req, res) => {
         });
     }
 });
-// PATCH /auth/me - atualizar perfil (nome, avatar)
 router.patch('/me', authMiddleware, async (req, res) => {
     try {
         if (!req.user) {
